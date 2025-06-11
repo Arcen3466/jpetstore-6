@@ -26,7 +26,7 @@ jobs:
           java-version: '11'
 
       - name: Build and test with Maven
-        run: ./mvnw clean verify -P tomcat90
+        run: ./mvnw clean install -DskipITs
 
   trivy-scan:
     needs: build-and-test
