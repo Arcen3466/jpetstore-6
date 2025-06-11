@@ -25,10 +25,10 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
 
-      - name: Build and test with Maven
+      - name: Build and test with Maven (unit only)
         run: ./mvnw clean install -DskipITs
 
-  trivy-scan:
+  security-scan:
     needs: build-and-test
     runs-on: ubuntu-latest
 
@@ -42,8 +42,20 @@ jobs:
           scan-type: 'fs'
           scan-ref: '.'
 
+      - name: Build Docker image for Trivy scan
+        run: docker build -t jpetstore .
+
+      - name: Scan Docker image with Trivy
+        run: trivy image jpetstore
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run Checkov scan
+        run: checkov -d .
+
   docker-build-and-push:
-    needs: [build-and-test, trivy-scan]
+    needs: [build-and-test, security-scan]
     runs-on: ubuntu-latest
 
     steps:
@@ -57,9 +69,7 @@ jobs:
           password: ${{ env.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
-        run: |
-          docker build -t $DOCKERHUB_USER/$IMAGE_NAME:latest .
+        run: docker build -t $DOCKERHUB_USER/$IMAGE_NAME:latest .
 
-      - name: Push to DockerHub
-        run: |
-          docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
+      - name: Push Docker image to DockerHub
+        run: docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
